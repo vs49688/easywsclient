@@ -453,7 +453,7 @@ class _RealWebSocket : public easywsclient::WebSocket
 };
 
 
-easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, const std::string& origin) {
+easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, const std::string& origin, const std::string& hostname) {
     char host[512];
     int port;
     char path[512];
@@ -488,6 +488,11 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
         fprintf(stderr, "Unable to connect to %s:%d\n", host, port);
         return NULL;
     }
+
+    const char *_hostname = host;
+    if(!hostname.empty())
+        _hostname = hostname.c_str();
+
     {
         // XXX: this should be done non-blocking,
         char line[1024];
@@ -495,10 +500,10 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
         int i;
         snprintf(line, 1024, "GET /%s HTTP/1.1\r\n", path); ::send(sockfd, line, strlen(line), 0);
         if (port == 80) {
-            snprintf(line, 1024, "Host: %s\r\n", host); ::send(sockfd, line, strlen(line), 0);
+            snprintf(line, 1024, "Host: %s\r\n", _hostname); ::send(sockfd, line, strlen(line), 0);
         }
         else {
-            snprintf(line, 1024, "Host: %s:%d\r\n", host, port); ::send(sockfd, line, strlen(line), 0);
+            snprintf(line, 1024, "Host: %s:%d\r\n", _hostname, port); ::send(sockfd, line, strlen(line), 0);
         }
         snprintf(line, 1024, "Upgrade: websocket\r\n"); ::send(sockfd, line, strlen(line), 0);
         snprintf(line, 1024, "Connection: Upgrade\r\n"); ::send(sockfd, line, strlen(line), 0);
@@ -543,11 +548,15 @@ WebSocket::pointer WebSocket::create_dummy() {
 
 
 WebSocket::pointer WebSocket::from_url(const std::string& url, const std::string& origin) {
-    return ::from_url(url, true, origin);
+    return ::from_url(url, true, origin, "");
 }
 
 WebSocket::pointer WebSocket::from_url_no_mask(const std::string& url, const std::string& origin) {
-    return ::from_url(url, false, origin);
+    return ::from_url(url, false, origin, "");
+}
+
+WebSocket::pointer WebSocket::from_url(const std::string& url, bool useMask, const std::string& origin, const std::string& hostname) {
+    return ::from_url(url, useMask, origin, hostname);
 }
 
 
